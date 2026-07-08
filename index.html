@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyHub — All Material, One Place</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase (compat SDK — simplest for plain HTML, no build tools needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<style>
+  :root{
+    --bg:#0b0d14; --bg-elevated:#12151f; --bg-card:#161a26; --border:#232838;
+    --text:#eef0f6; --text-soft:#8d95ac;
+    --accent1:#6c5ce7; --accent2:#00d9c0;
+    --accent-grad: linear-gradient(120deg,var(--accent1),var(--accent2));
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh;}
+
+  nav{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 32px;
+    background:rgba(11,13,20,0.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+  }
+  .logo{font-family:'Sora',sans-serif; font-weight:800; font-size:20px; display:flex; align-items:center; gap:8px; letter-spacing:-0.02em;}
+  .logo .dot{width:10px;height:10px;border-radius:50%; background:var(--accent-grad);}
+  nav .nav-search{flex:1; max-width:420px; margin:0 24px; position:relative;}
+  nav .nav-search input{
+    width:100%; background:var(--bg-elevated); border:1px solid var(--border); border-radius:24px;
+    padding:10px 16px 10px 38px; color:var(--text); font-family:'Inter',sans-serif; font-size:14px; outline:none;
+  }
+  nav .nav-search input:focus{border-color:var(--accent2);}
+  nav .nav-search::before{content:"⌕"; position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-soft); font-size:16px;}
+  .nav-links{display:flex; align-items:center; gap:14px;}
+  .nav-tag{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-soft); border:1px solid var(--border); padding:5px 10px; border-radius:6px; white-space:nowrap;}
+  .admin-link{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-soft); text-decoration:none; border:1px solid var(--border); padding:5px 10px; border-radius:6px;}
+  .admin-link:hover{color:var(--accent2); border-color:var(--accent2);}
+
+  .hero{position:relative; padding:64px 32px 40px; overflow:hidden;}
+  .aurora{
+    position:absolute; inset:-40% -10% auto -10%; height:480px;
+    background:radial-gradient(circle at 20% 30%, rgba(108,92,231,0.35), transparent 55%),
+               radial-gradient(circle at 80% 20%, rgba(0,217,192,0.28), transparent 50%);
+    filter:blur(40px); pointer-events:none;
+  }
+  .hero-inner{position:relative; max-width:1200px; margin:0 auto;}
+  .eyebrow{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent2); margin-bottom:14px; display:inline-block;}
+  .hero h1{font-family:'Sora',sans-serif; font-weight:800; font-size:clamp(32px,5vw,52px); line-height:1.05; margin:0 0 14px; letter-spacing:-0.02em; max-width:680px;}
+  .hero h1 span{background:var(--accent-grad); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .hero p{color:var(--text-soft); font-size:16px; max-width:520px; line-height:1.6; margin:0;}
+
+  .chip-row{max-width:1200px; margin:36px auto 0; padding:0 32px; display:flex; gap:10px; flex-wrap:wrap;}
+  .chip{font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px; padding:9px 16px; border-radius:20px; border:1px solid var(--border); background:var(--bg-elevated); color:var(--text-soft); cursor:pointer; transition:all .15s;}
+  .chip:hover{border-color:var(--accent2); color:var(--text);}
+  .chip.active{background:var(--accent-grad); border-color:transparent; color:#08090d;}
+  .chip:focus-visible{outline:2px solid var(--accent2); outline-offset:2px;}
+
+  .section{max-width:1200px; margin:0 auto; padding:32px 32px 90px;}
+  .section-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:18px;}
+  .section-head h2{font-family:'Sora',sans-serif; font-size:18px; font-weight:700; margin:0;}
+  .count{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-soft);}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:22px;}
+  .card{background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; text-decoration:none; color:var(--text); display:flex; flex-direction:column; transition:transform .18s, border-color .18s;}
+  .card:hover{transform:translateY(-4px); border-color:var(--accent2);}
+  .card:focus-visible{outline:2px solid var(--accent2); outline-offset:3px;}
+  .thumb{width:100%; aspect-ratio:16/9; background:var(--bg-elevated); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center;}
+  .thumb img{width:100%; height:100%; object-fit:cover;}
+  .thumb .fallback-icon{font-size:34px; opacity:0.85;}
+  .thumb .type-tag{position:absolute; top:8px; right:8px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.05em; text-transform:uppercase; padding:3px 8px; border-radius:5px; background:rgba(8,9,13,0.75); backdrop-filter:blur(4px);}
+  .thumb .play-badge{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(8,9,13,0.15);}
+  .thumb .play-badge::after{content:"▶"; width:44px; height:44px; background:rgba(8,9,13,0.6); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff;}
+  .card-body{padding:14px 16px 16px; display:flex; flex-direction:column; gap:6px; flex:1;}
+  .card-body h3{font-family:'Inter',sans-serif; font-size:14.5px; font-weight:600; margin:0; line-height:1.35;}
+  .card-body .meta{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent2);}
+  .card-body p{font-size:12.5px; color:var(--text-soft); line-height:1.5; margin:2px 0 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+
+  .empty{text-align:center; padding:70px 20px; color:var(--text-soft); font-family:'JetBrains Mono',monospace; font-size:13px;}
+  footer{border-top:1px solid var(--border); padding:22px 32px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-soft);}
+  @media (max-width:640px){ nav{flex-wrap:wrap; gap:10px;} nav .nav-search{order:3; max-width:100%; margin:0;} .nav-tag{display:none;} }
+  @media (prefers-reduced-motion: reduce){ .card{transition:none;} }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo"><span class="dot"></span>StudyHub</div>
+  <div class="nav-search"><input id="searchInput" type="text" placeholder="Search notes, videos, subjects…" aria-label="Search materials"></div>
+  <div class="nav-links">
+    <span class="nav-tag" id="itemCountTag">— items</span>
+    <a class="admin-link" href="admin.html">Admin</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="aurora"></div>
+  <div class="hero-inner">
+    <span class="eyebrow">Open access · live database</span>
+    <h1>Sab kuch ek jagah — <span>notes, videos, PDFs.</span></h1>
+    <p>Jo bhi material upload hota hai, wo yahin milega. Search karo, category chuno, aur seedha open karo.</p>
+  </div>
+</div>
+
+<div class="chip-row" id="chipRow"></div>
+
+<div class="section">
+  <div class="section-head">
+    <h2>All Material</h2>
+    <span class="count" id="countLine"></span>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyState" style="display:none;">Kuch nahi mila is search ke liye.</div>
+</div>
+
+<footer>StudyHub · backed by Firebase · content links open in a new tab</footer>
+
+<script>
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const TYPE_TAG_BG = {
+  pdf:"linear-gradient(120deg,#d0563f,#b6432c)",
+  video:"linear-gradient(120deg,#6c5ce7,#4b3fb0)",
+  notes:"linear-gradient(120deg,#00d9c0,#00a891)",
+  image:"linear-gradient(120deg,#c65fd6,#8e3d9c)",
+  doc:"linear-gradient(120deg,#f4a02b,#c97e14)"
+};
+const TYPE_ICON = {pdf:"📄", video:"🎬", notes:"📝", image:"🖼", doc:"📁"};
+
+let allItems = [];
+let activeType = "all";
+
+function extractYoutubeId(url){
+  if(!url) return null;
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
+  return m ? m[1] : null;
+}
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str || "";
+  return d.innerHTML;
+}
+function renderThumb(item){
+  const type = (item.type||"doc").toLowerCase();
+  const ytId = type === "video" ? extractYoutubeId(item.link) : null;
+  const tagStyle = `background:${TYPE_TAG_BG[type] || TYPE_TAG_BG.doc}`;
+  if(ytId){
+    return `<div class="thumb"><img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" alt="">
+      <div class="play-badge"></div><span class="type-tag" style="${tagStyle}">${escapeHtml(item.type)}</span></div>`;
+  }
+  return `<div class="thumb"><span class="fallback-icon">${TYPE_ICON[type] || "📁"}</span>
+    <span class="type-tag" style="${tagStyle}">${escapeHtml(item.type)}</span></div>`;
+}
+
+function render(){
+  const grid = document.getElementById('grid');
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = allItems.filter(item=>{
+    const matchesType = activeType==="all" || (item.type||"").toLowerCase()===activeType;
+    const haystack = (item.title+" "+item.subject+" "+item.tags+" "+item.description).toLowerCase();
+    const matchesQuery = query==="" || haystack.includes(query);
+    return matchesType && matchesQuery;
+  });
+  grid.innerHTML = "";
+  document.getElementById('emptyState').style.display = filtered.length ? "none" : "block";
+  document.getElementById('countLine').textContent = `${filtered.length} item${filtered.length===1?"":"s"}`;
+  document.getElementById('itemCountTag').textContent = `${allItems.length} items total`;
+
+  filtered.forEach(item=>{
+    const card = document.createElement('a');
+    card.className = 'card';
+    card.href = item.link;
+    card.target = "_blank";
+    card.rel = "noopener";
+    card.innerHTML = `
+      ${renderThumb(item)}
+      <div class="card-body">
+        <h3>${escapeHtml(item.title)}</h3>
+        <span class="meta">${escapeHtml(item.subject)}</span>
+        <p>${escapeHtml(item.description)}</p>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function buildChips(){
+  const types = ["all", ...new Set(allItems.map(i=>(i.type||"doc").toLowerCase()))];
+  const container = document.getElementById('chipRow');
+  container.innerHTML = "";
+  types.forEach(t=>{
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (t===activeType ? ' active' : '');
+    chip.textContent = t==="all" ? "All" : (TYPE_ICON[t]||"") + " " + t.charAt(0).toUpperCase()+t.slice(1);
+    chip.addEventListener('click', ()=>{
+      activeType = t;
+      document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+      render();
+    });
+    container.appendChild(chip);
+  });
+}
+
+document.getElementById('searchInput').addEventListener('input', render);
+
+// Live listener — updates instantly when admin uploads something new
+db.collection('materials').orderBy('createdAt','desc').onSnapshot(snapshot=>{
+  allItems = snapshot.docs.map(doc=>doc.data());
+  buildChips();
+  render();
+}, err=>{
+  console.error(err);
+  document.getElementById('emptyState').textContent = "Database se connect nahi ho paya. firebase-config.js check karein.";
+  document.getElementById('emptyState').style.display = 'block';
+});
+</script>
+</body>
+</html>

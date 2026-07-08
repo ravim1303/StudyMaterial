@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyHub — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<style>
+  :root{
+    --bg:#0b0d14; --bg-elevated:#12151f; --bg-card:#161a26; --border:#232838;
+    --text:#eef0f6; --text-soft:#8d95ac;
+    --accent1:#6c5ce7; --accent2:#00d9c0;
+    --accent-grad: linear-gradient(120deg,var(--accent1),var(--accent2));
+    --radius:12px;
+    --danger:#e5484d;
+    --success:#00d9c0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh;}
+
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 32px; border-bottom:1px solid var(--border);
+  }
+  .logo{font-family:'Sora',sans-serif; font-weight:800; font-size:20px; display:flex; align-items:center; gap:8px;}
+  .logo .dot{width:10px;height:10px;border-radius:50%; background:var(--accent-grad);}
+  .back-link{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-soft); text-decoration:none; border:1px solid var(--border); padding:5px 10px; border-radius:6px;}
+  .back-link:hover{color:var(--accent2); border-color:var(--accent2);}
+
+  .wrap{max-width:640px; margin:0 auto; padding:56px 24px 90px;}
+
+  /* ---- LOGIN ---- */
+  #loginPanel{
+    background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:36px 32px; margin-top:40px;
+  }
+  #loginPanel h1{font-family:'Sora',sans-serif; font-size:24px; margin:0 0 6px;}
+  #loginPanel p.sub{color:var(--text-soft); font-size:14px; margin:0 0 26px;}
+  label{display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text-soft);}
+  input, select, textarea{
+    width:100%; background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px;
+    padding:11px 13px; color:var(--text); font-family:'Inter',sans-serif; font-size:14px; outline:none; margin-bottom:18px;
+  }
+  input:focus, select:focus, textarea:focus{border-color:var(--accent2);}
+  textarea{resize:vertical; min-height:70px;}
+  button{
+    font-family:'Sora',sans-serif; font-weight:700; font-size:14px;
+    background:var(--accent-grad); color:#08090d; border:none; border-radius:8px;
+    padding:12px 20px; cursor:pointer; width:100%;
+  }
+  button:hover{filter:brightness(1.08);}
+  button:disabled{opacity:0.5; cursor:not-allowed;}
+  .msg{font-family:'JetBrains Mono',monospace; font-size:12.5px; margin-top:14px; padding:10px 12px; border-radius:8px; display:none;}
+  .msg.error{display:block; background:rgba(229,72,77,0.12); color:var(--danger); border:1px solid rgba(229,72,77,0.3);}
+  .msg.success{display:block; background:rgba(0,217,192,0.12); color:var(--success); border:1px solid rgba(0,217,192,0.3);}
+
+  /* ---- UPLOAD PANEL ---- */
+  #uploadPanel{display:none;}
+  .panel-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;}
+  .panel-head h1{font-family:'Sora',sans-serif; font-size:24px; margin:0;}
+  #signOutBtn{width:auto; background:var(--bg-elevated); color:var(--text-soft); border:1px solid var(--border); padding:8px 14px; font-size:12.5px;}
+  .card-form{background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .progress-wrap{background:var(--bg-elevated); border-radius:8px; height:8px; overflow:hidden; margin:-8px 0 18px; display:none;}
+  .progress-bar{height:100%; background:var(--accent-grad); width:0%; transition:width .2s;}
+
+  .recent{margin-top:32px;}
+  .recent h2{font-family:'Sora',sans-serif; font-size:15px; margin:0 0 14px; color:var(--text-soft);}
+  .recent-item{
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--bg-card); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; margin-bottom:8px; font-size:13px;
+  }
+  .recent-item .ri-title{font-weight:600;}
+  .recent-item .ri-meta{color:var(--text-soft); font-family:'JetBrains Mono',monospace; font-size:11px;}
+  .del-btn{width:auto; background:transparent; border:1px solid var(--border); color:var(--danger); padding:6px 10px; font-size:11px; font-family:'JetBrains Mono',monospace;}
+  .del-btn:hover{border-color:var(--danger); background:rgba(229,72,77,0.08);}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo"><span class="dot"></span>StudyHub Admin</div>
+  <a class="back-link" href="index.html">← Back to site</a>
+</nav>
+
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div id="loginPanel">
+    <h1>Login</h1>
+    <p class="sub">Sirf owner ke liye. Apna email aur password daalo.</p>
+    <label for="email">Email</label>
+    <input type="email" id="email" placeholder="you@example.com">
+    <label for="password">Password</label>
+    <input type="password" id="password" placeholder="••••••••">
+    <button id="loginBtn">Login</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <!-- UPLOAD (shown after login) -->
+  <div id="uploadPanel">
+    <div class="panel-head">
+      <h1>Upload Material</h1>
+      <button id="signOutBtn">Sign out</button>
+    </div>
+
+    <div class="card-form">
+      <label for="title">Title</label>
+      <input type="text" id="title" placeholder="Physics Chapter 5 Notes">
+
+      <div class="row2">
+        <div>
+          <label for="subject">Subject</label>
+          <input type="text" id="subject" placeholder="Physics">
+        </div>
+        <div>
+          <label for="type">Type</label>
+          <select id="type">
+            <option value="PDF">PDF</option>
+            <option value="Video">Video</option>
+            <option value="Notes">Notes</option>
+            <option value="Image">Image</option>
+            <option value="Doc">Doc</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="description">Description</label>
+      <textarea id="description" placeholder="Short description of the content"></textarea>
+
+      <label for="tags">Tags (space separated)</label>
+      <input type="text" id="tags" placeholder="physics motion class11">
+
+      <div id="linkFieldWrap">
+        <label for="linkInput" id="linkLabel">Content Link</label>
+        <input type="text" id="linkInput" placeholder="https://drive.google.com/... or https://www.youtube.com/watch?v=...">
+        <p style="margin:-12px 0 18px; font-size:12px; color:var(--text-soft); line-height:1.5;">
+          Video ke liye: YouTube link paste karo.<br>
+          PDF/Notes/Image/Doc ke liye: pehle Google Drive pe file upload karo, "Anyone with the link" share karo, phir wahi link yahan paste karo.
+        </p>
+      </div>
+
+      <button id="uploadBtn">Add to StudyHub</button>
+      <div class="msg" id="uploadMsg"></div>
+    </div>
+
+    <div class="recent">
+      <h2>Recently uploaded</h2>
+      <div id="recentList"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const loginPanel = document.getElementById('loginPanel');
+const uploadPanel = document.getElementById('uploadPanel');
+const loginMsg = document.getElementById('loginMsg');
+const uploadMsg = document.getElementById('uploadMsg');
+
+function showMsg(el, text, type){
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+
+// ---- LOGIN ----
+document.getElementById('loginBtn').addEventListener('click', ()=>{
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  if(!email || !password){ showMsg(loginMsg, "Email aur password dono bharo.", "error"); return; }
+  auth.signInWithEmailAndPassword(email, password)
+    .catch(err=> showMsg(loginMsg, "Login fail: " + err.message, "error"));
+});
+
+document.getElementById('signOutBtn').addEventListener('click', ()=> auth.signOut());
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    loginPanel.style.display = 'none';
+    uploadPanel.style.display = 'block';
+    listenRecent();
+  } else {
+    loginPanel.style.display = 'block';
+    uploadPanel.style.display = 'none';
+  }
+});
+
+// ---- UPLOAD ----
+document.getElementById('uploadBtn').addEventListener('click', async ()=>{
+  const title = document.getElementById('title').value.trim();
+  const subject = document.getElementById('subject').value.trim();
+  const type = document.getElementById('type').value;
+  const description = document.getElementById('description').value.trim();
+  const tags = document.getElementById('tags').value.trim();
+  const linkInput = document.getElementById('linkInput');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const link = linkInput.value.trim();
+
+  if(!title || !subject){ showMsg(uploadMsg, "Title aur subject zaroori hai.", "error"); return; }
+  if(!link){ showMsg(uploadMsg, "Content link paste karo.", "error"); return; }
+
+  uploadBtn.disabled = true;
+  try{
+    await db.collection('materials').add({
+      title, subject, type, description, tags, link,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    showMsg(uploadMsg, "Add ho gaya ✓", "success");
+    ['title','subject','description','tags'].forEach(id=> document.getElementById(id).value = '');
+    linkInput.value = '';
+  } catch(err){
+    showMsg(uploadMsg, "Error: " + err.message, "error");
+  } finally {
+    uploadBtn.disabled = false;
+  }
+});
+
+// ---- RECENT LIST + DELETE ----
+function listenRecent(){
+  db.collection('materials').orderBy('createdAt','desc').limit(10).onSnapshot(snapshot=>{
+    const list = document.getElementById('recentList');
+    list.innerHTML = '';
+    snapshot.forEach(doc=>{
+      const d = doc.data();
+      const row = document.createElement('div');
+      row.className = 'recent-item';
+      row.innerHTML = `
+        <div>
+          <div class="ri-title">${escapeHtml(d.title)}</div>
+          <div class="ri-meta">${escapeHtml(d.subject)} · ${escapeHtml(d.type)}</div>
+        </div>
+      `;
+      const delBtn = document.createElement('button');
+      delBtn.className = 'del-btn';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', ()=> deleteItem(doc.id));
+      row.appendChild(delBtn);
+      list.appendChild(row);
+    });
+  });
+}
+
+async function deleteItem(id){
+  if(!confirm('Ye item delete karna hai?')) return;
+  await db.collection('materials').doc(id).delete();
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str || "";
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
