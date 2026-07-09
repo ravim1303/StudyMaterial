@@ -97,7 +97,7 @@
   <!-- LOGIN -->
   <div id="loginPanel">
     <h1>Login</h1>
-    <p class="sub">Sirf owner ke liye. Apna email aur password daalo.</p>
+    <p class="sub">only for admin. your email and password.</p>
     <label for="email">Email</label>
     <input type="email" id="email" placeholder="you@example.com">
     <label for="password">Password</label>
@@ -180,7 +180,7 @@ function showMsg(el, text, type){
 document.getElementById('loginBtn').addEventListener('click', ()=>{
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-  if(!email || !password){ showMsg(loginMsg, "Email aur password dono bharo.", "error"); return; }
+  if(!email || !password){ showMsg(loginMsg, "Fill both Email and password.", "error"); return; }
   auth.signInWithEmailAndPassword(email, password)
     .catch(err=> showMsg(loginMsg, "Login fail: " + err.message, "error"));
 });
@@ -209,8 +209,8 @@ document.getElementById('uploadBtn').addEventListener('click', async ()=>{
   const uploadBtn = document.getElementById('uploadBtn');
   const link = linkInput.value.trim();
 
-  if(!title || !subject){ showMsg(uploadMsg, "Title aur subject zaroori hai.", "error"); return; }
-  if(!link){ showMsg(uploadMsg, "Content link paste karo.", "error"); return; }
+  if(!title || !subject){ showMsg(uploadMsg, "Title and subject are required.", "error"); return; }
+  if(!link){ showMsg(uploadMsg, "Content link paste here .", "error"); return; }
 
   uploadBtn.disabled = true;
   try{
@@ -255,7 +255,7 @@ function listenRecent(){
 }
 
 async function deleteItem(id){
-  if(!confirm('Ye item delete karna hai?')) return;
+  if(!confirm('Do you want to delete?')) return;
   await db.collection('materials').doc(id).delete();
 }
 
